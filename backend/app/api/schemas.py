@@ -1,79 +1,100 @@
 """
-Pydantic schemas for API requests/responses
+Pydantic schemas for API
 """
 from pydantic import BaseModel, Field
-from typing import Optional, Dict
 from datetime import datetime
+from typing import Optional
 
 
 # Marketplace Account Schemas
-class MarketplaceAccountCreate(BaseModel):
+class MarketplaceAccountBase(BaseModel):
     marketplace: str = Field(..., description="Marketplace name (wildberries, ozon, yandex)")
-    account_name: str = Field(..., description="Account display name")
+    shop_name: str = Field(..., description="Shop name")
     api_key: str = Field(..., description="API key for marketplace")
-    is_active: bool = Field(default=True)
+    is_active: bool = Field(default=True, description="Is account active")
+
+
+class MarketplaceAccountCreate(MarketplaceAccountBase):
+    pass
+
+
+class MarketplaceAccountUpdate(BaseModel):
+    marketplace: Optional[str] = None
+    shop_name: Optional[str] = None
+    api_key: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class MarketplaceAccountResponse(BaseModel):
     id: int
     marketplace: str
-    account_name: str
+    shop_name: str
     is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
 # LLM Config Schemas
-class LLMConfigCreate(BaseModel):
-    name: str = Field(..., description="Configuration name")
+class LLMConfigBase(BaseModel):
     provider: str = Field(..., description="LLM provider (openai, anthropic, etc)")
-    model_name: str = Field(..., description="Model name")
-    api_key: Optional[str] = Field(None, description="API key for LLM provider")
+    model: str = Field(..., description="Model name")
+    api_key: str = Field(..., description="API key for LLM provider")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    max_tokens: int = Field(default=500, ge=1)
+    max_tokens: int = Field(default=500, ge=1, le=4000)
     is_active: bool = Field(default=True)
+
+
+class LLMConfigCreate(LLMConfigBase):
+    pass
+
+
+class LLMConfigUpdate(BaseModel):
+    provider: Optional[str] = None
+    model: Optional[str] = None
+    api_key: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 class LLMConfigResponse(BaseModel):
     id: int
-    name: str
     provider: str
-    model_name: str
+    model: str
     temperature: float
     max_tokens: int
     is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
 # Review Rule Schemas
-class ReviewRuleCreate(BaseModel):
-    rating: int = Field(..., ge=1, le=5, description="Rating (1-5)")
-    condition_type: str = Field(..., description="Condition type (contains, not_contains, equals)")
-    keywords: Optional[str] = Field(None, description="Keywords for condition (comma-separated)")
-    auto_response_enabled: bool = Field(default=False)
-    response_template: Optional[str] = Field(None, description="Template for auto-response")
-    telegram_notification: bool = Field(default=True)
-    priority: int = Field(default=0, description="Rule priority (higher = processed first)")
+class ReviewRuleBase(BaseModel):
+    rule_name: str
+    condition_type: str = Field(..., description="rating, keyword, sentiment")
+    condition_value: str
+    response_template: str
+    priority: int = Field(default=0)
+    is_active: bool = Field(default=True)
+
+
+class ReviewRuleCreate(ReviewRuleBase):
+    pass
 
 
 class ReviewRuleResponse(BaseModel):
     id: int
-    rating: int
+    rule_name: str
     condition_type: str
-    keywords: Optional[str]
-    auto_response_enabled: bool
-    response_template: Optional[str]
-    telegram_notification: bool
+    condition_value: str
+    response_template: str
     priority: int
+    is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -83,16 +104,15 @@ class ReviewRuleResponse(BaseModel):
 class ReviewResponse(BaseModel):
     id: int
     marketplace_account_id: int
-    external_id: str
+    review_id: str
     rating: int
-    review_text: Optional[str]
-    reviewer_name: Optional[str]
-    product_name: Optional[str]
-    response_text: Optional[str]
-    processed: bool
+    review_text: str
+    customer_name: Optional[str] = None
+    product_name: Optional[str] = None
+    generated_response: Optional[str] = None
     moderation_status: str
-    llm_used: Optional[str]
-    cost_rub: Optional[float]
+    processed: bool
+    cost_rub: float
     created_at: datetime
     processed_at: Optional[datetime] = None
 
@@ -108,5 +128,5 @@ class StatsResponse(BaseModel):
     auto_sent: int
     average_rating: float
     total_cost_rub: float
-    reviews_by_rating: Dict[str, int]
-    reviews_by_marketplace: Dict[str, int]
+    reviews_by_rating: dict
+    reviews_by_marketplace: dict
