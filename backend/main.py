@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.core.config import settings
 from app.db.database import init_db, get_db
 from app.db.models import User, MarketplaceAccount, LLMConfig, ReviewRule
+from app.api.endpoints import router as api_router
 
 # Configure logging
 logger.remove()
@@ -83,12 +84,8 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# API Routes will be added here
-# TODO: Add user management endpoints
-# TODO: Add marketplace account endpoints
-# TODO: Add LLM config endpoints
-# TODO: Add review rules endpoints
-# TODO: Add review endpoints
+# Include API router
+app.include_router(api_router, prefix="/api", tags=["api"])
 
 
 if __name__ == "__main__":
