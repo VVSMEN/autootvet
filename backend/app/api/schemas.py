@@ -3,7 +3,7 @@ Pydantic schemas for API
 """
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 # Marketplace Account Schemas
@@ -72,13 +72,16 @@ class LLMConfigResponse(BaseModel):
         from_attributes = True
 
 
-# Review Rule Schemas
+# Review Rule Schemas (обновлено под реальную модель БД)
 class ReviewRuleBase(BaseModel):
-    rule_name: str
-    condition_type: str = Field(..., description="rating, keyword, sentiment")
-    condition_value: str
-    response_template: str
-    priority: int = Field(default=0)
+    name: str = Field(..., description="Rule name")
+    min_rating: int = Field(default=1, ge=1, le=5)
+    max_rating: int = Field(default=5, ge=1, le=5)
+    keywords_include: Optional[List[str]] = Field(default=None, description="Keywords to include")
+    keywords_exclude: Optional[List[str]] = Field(default=None, description="Keywords to exclude")
+    require_moderation: bool = Field(default=True)
+    custom_prompt: Optional[str] = Field(default=None, description="Custom prompt for LLM")
+    tone: str = Field(default="friendly", description="Response tone: friendly, professional, apologetic")
     is_active: bool = Field(default=True)
 
 
@@ -88,11 +91,14 @@ class ReviewRuleCreate(ReviewRuleBase):
 
 class ReviewRuleResponse(BaseModel):
     id: int
-    rule_name: str
-    condition_type: str
-    condition_value: str
-    response_template: str
-    priority: int
+    name: str
+    min_rating: int
+    max_rating: int
+    keywords_include: Optional[List[str]]
+    keywords_exclude: Optional[List[str]]
+    require_moderation: bool
+    custom_prompt: Optional[str]
+    tone: str
     is_active: bool
     created_at: datetime
 

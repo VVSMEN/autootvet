@@ -16,6 +16,14 @@ from app.core.security import crypto_service
 router = APIRouter()
 
 
+def get_current_user(db: Session):
+    """Helper to get first user (for testing, in production use auth)"""
+    user = db.query(User).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="No users in system. Please create a user first.")
+    return user
+
+
 @router.get("/marketplace-accounts", response_model=List[MarketplaceAccountResponse])
 async def list_marketplace_accounts(db: Session = Depends(get_db)):
     accounts = db.query(MarketplaceAccount).all()
@@ -24,9 +32,7 @@ async def list_marketplace_accounts(db: Session = Depends(get_db)):
 
 @router.post("/marketplace-accounts", response_model=MarketplaceAccountResponse, status_code=201)
 async def create_marketplace_account(account: MarketplaceAccountCreate, db: Session = Depends(get_db)):
-    user = db.query(User).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="No users in system")
+    user = get_current_user(db)
     encrypted_key = crypto_service.encrypt(account.api_key)
     db_account = MarketplaceAccount(
         user_id=user.id,
@@ -82,8 +88,10 @@ async def list_llm_configs(db: Session = Depends(get_db)):
 
 @router.post("/llm-configs", response_model=LLMConfigResponse, status_code=201)
 async def create_llm_config(config: LLMConfigCreate, db: Session = Depends(get_db)):
+    user = get_current_user(db)
     encrypted_key = crypto_service.encrypt(config.api_key)
     db_config = LLMConfig(
+        user_id=user.id,
         provider=config.provider,
         model=config.model,
         api_key_encrypted=encrypted_key,
@@ -99,13 +107,17 @@ async def create_llm_config(config: LLMConfigCreate, db: Session = Depends(get_d
 
 @router.get("/review-rules", response_model=List[ReviewRuleResponse])
 async def list_review_rules(db: Session = Depends(get_db)):
-    rules = db.query(ReviewRule).order_by(ReviewRule.priority.desc()).all()
+    rules = db.query(ReviewRule).order_by(ReviewRule.created_at.desc()).all()
     return rules
 
 
 @router.post("/review-rules", response_model=ReviewRuleResponse, status_code=201)
 async def create_review_rule(rule: ReviewRuleCreate, db: Session = Depends(get_db)):
-    db_rule = ReviewRule(**rule.model_dump())
+    """Create new review rule"""
+    user = db.query(User).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="No users in system")
+    db_rule = ReviewRule(user_id=user.id, **rule.model_dump())
     db.add(db_rule)
     db.commit()
     db.refresh(db_rule)
